@@ -52,8 +52,8 @@ module load Python/3.6.5-foss-2016b-fh3
 
 echo -e "\n-----------Beginning Nanoplot processing-----------\n"
 
-Create NanoPlot figures
-NanoStats report included
+# Create NanoPlot figures
+# NanoStats report included
 mkdir $NANOPLOT
 
 #Nanoplot function to run through barcodes

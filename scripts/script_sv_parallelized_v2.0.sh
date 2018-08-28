@@ -2,6 +2,8 @@
 
 # MinIon pipeline for structural variant calls parallelized v2.0
 
+##### Time for Nanoplot/LAST/minimap2/NanoSV 3 Gbp read: 69m0.263s
+
 ###TBA###
 ### Nanoplot, LAST, and minimap2 all parallel
 # Nanopolish
@@ -124,8 +126,8 @@ echo -e "\n-----------Porechop processing completed-----------\n"
 
 echo -e "\n-----------Beginning Nanoplot processing-----------\n"
 
-Create NanoPlot figures
-NanoStats report included
+# Create NanoPlot figures
+# NanoStats report included
 mkdir $NANOPLOT
 
 #Nanoplot function to run through barcodes

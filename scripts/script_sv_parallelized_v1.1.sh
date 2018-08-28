@@ -123,8 +123,8 @@ echo -e "\n-----------Porechop processing completed-----------\n"
 
 ###############################
 
-Create NanoPlot figures
-NanoStats report included
+# Create NanoPlot figures
+# NanoStats report included
 mkdir $NANOPLOT
 
 #Nanoplot function to run through barcodes
