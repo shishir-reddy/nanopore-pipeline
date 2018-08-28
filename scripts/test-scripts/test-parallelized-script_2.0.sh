@@ -1,24 +1,7 @@
 #!/bin/bash
 
-# MinION pipeline for structural variant calls parallelized v1.1
-
-##### Time for Nanoplot/LAST/minimap2/NanoSV 3 Gbp read: 69m0.263s
-
-###TBA###
-# Nanopolish
-# Metapore
-# Charlie Hill
-#########
-
-# Start by reading inputs from the user - [SEQUENCE_NAME] [/path/to/data] [LAST, minimap2, both]
-
-# Sequence name
-echo "Enter sequence name"
-read SEQUENCE_NAME
-
-# /path/to/data
-echo "Enter /path/to/fast5"
-read FAST5
+# SPLIT EVERYTHING AFTER PORECHOP BY BARCODE
+#   # Need to add names for separate barcodes AND vcf files should include sequence name?
 
 # Aligner
 echo "Enter Aligner to be used (LAST or minimap2 or both)"
@@ -29,23 +12,13 @@ ALIGNER=${ALIGNER,,}
 #/path/to/radich home
 export RADICH_HOME="/fh/fast/radich_j"
 
-#Working folder for the session is created with the date and timestamp. All processes will be run in this folder
-DATE=$(date)
-NAME_DATE_FORMATTED="${SEQUENCE_NAME}_${DATE// /_}"
-export WORKING_FOLDER="$RADICH_HOME/nanopore/Jobs/$NAME_DATE_FORMATTED"
-mkdir $WORKING_FOLDER
-
-export FLOWCELL="FLO-MIN106"
-export KIT="SQK-LSK108"
-
-#/path/to/Fastq/Original (Albacore Folder)
-export FASTQ="$WORKING_FOLDER/albacore-fastq"
+export WORKING_FOLDER="$RADICH_HOME/nanopore/Jobs/parallel-testing"
 
 #/path/to/Fastq/Demultiplexed (Porechop Folder)
-export DEMULTIPLEXED_DIRECTORY="$WORKING_FOLDER/porechop-demux"
+export DEMULTIPLEXED_DIRECTORY="$RADICH_HOME/nanopore/Jobs/Wed_Aug_22_13:53:12_PDT_2018./porechop-demux"
 
 #/path/to/NanoPlot
-export NANOPLOT="$WORKING_FOLDER/nanoplot_$NAME_DATE_FORMATTED"
+export NANOPLOT="$WORKING_FOLDER/nanoplot_Wed_Aug_22_13:53:12_PDT_2018."
 
 #/path/to/ReferenceGenomes
 export REFERENCE="/shared/biodata/ngs/Reference/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta"
@@ -70,58 +43,14 @@ export LAST_NANOSV_DIRECTORY="$NANOSV_DIRECTORY/last-vcf"
 
 #/path/to/Minimap2NanoSV
 export MINIMAP2_NANOSV_DIRECTORY="$NANOSV_DIRECTORY/minimap2-vcf"
-
-###############################
-
-# Albacore
-
-###############################
-
-echo -e "\n-----------Beginning Albacore processing-----------\n"
-
-# Basecall
-mkdir $FASTQ
 module load Python/3.6.5-foss-2016b-fh3
-read_fast5_basecaller.py \
---flowcell $FLOWCELL \
---kit $KIT \
---worker_threads 12 \
---input $FAST5 \
---output_format fastq \
---save_path $FASTQ \
---recursive \
---resume
-
-# Merge all fastq files
-#cat $FASTQ/workspace/pass/barcode*/*.fastq $FASTQ/workspace/pass/unclassified/*.fastq >> $FASTQ/workspace/pass/merged.fastq
-cat $FASTQ/workspace/pass/*.fastq >> $FASTQ/workspace/pass/merged.fastq
-
-echo -e "\n-----------Albacore processing completed-----------\n"
-
-###############################
-
-# Porechop
-
-###############################
-
-echo -e "\n-----------Beginning Porechop processing-----------\n"
-
-# Demultiplex
-mkdir $DEMULTIPLEXED_DIRECTORY
-porechop \
---input $FASTQ/workspace/pass/merged.fastq \
---barcode_dir $DEMULTIPLEXED_DIRECTORY \
---format fastq \
---threads 12 \
--v 2
-
-echo -e "\n-----------Porechop processing completed-----------\n"
-
 ###############################
 
 # Nanoplot
 
 ###############################
+
+echo -e "\n-----------Beginning Nanoplot processing-----------\n"
 
 Create NanoPlot figures
 NanoStats report included
@@ -143,10 +72,13 @@ nanoplot_function () {
 }
 
 #For
-for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do 
+( for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do 
     nanoplot_function "$file" &
-done
+done 
 wait
+echo -e "\n-----------Nanoplot completed-----------\n" ) &
+
+
 
 ###############################
 
@@ -159,7 +91,9 @@ mkdir $NANOSV_DIRECTORY
 
 #LAST -Align to human genome using LAST
 
-if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
+( if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
+
+    echo -e "\n-----------Beginning LAST/NanoSV processing-----------\n"
 
     mkdir $LAST_ALIGNMENT_DIRECTORY
     mkdir $LAST_NANOSV_DIRECTORY
@@ -193,7 +127,7 @@ if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
         NanoSV -s samtools -c config.ini -b $RADICH_HOME/osala/nanopore/hg19-refFlat.bed -o $LAST_NANOSV_DIRECTORY/"${file_name}_last_NanoSV.vcf" $LAST_ALIGNMENT_DIRECTORY/"${file_name}_last-alignment-sorted.bam"
     }
 
-    #Run LAST, samtools, and NanoSV separated to prevent module interference. Each process is done in parallel accross all barcodes
+    #Run LAST in it's own subshell to prevent module interference
     module load LAST/926-foss-2016b
     module load Python/2.7.15-foss-2016b
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_function "$file" & done
@@ -207,15 +141,18 @@ if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_nanosv_function "$file" & done
     wait
 
-    echo "LAST/NanoSV processing completed"
+    echo -e "\n-----------LAST/NanoSV processing completed-----------\n"
 
-fi
+fi ) &
 
 ###############################
 
 # MiniMap2 - Align to human genome using MiniMap2 
 
-if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
+
+( if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
+
+    echo -e "\n-----------Beginning minimap2/NanoSV processing-----------\n"
 
     mkdir $MINIMAP2_ALIGNMENT_DIRECTORY
     mkdir $MINIMAP2_NANOSV_DIRECTORY
@@ -241,21 +178,21 @@ if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
 
     #Run minimap2, samtools, and NanoSV separated to prevent module interference. Each process is done in parallel accross all barcodes
     module load minimap2/2.10-foss-2016b
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_function "$file" & done
     wait
 
     module load samtools
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_samtools_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_samtools_function "$file" & done
     wait
 
     module load NanoSV/1.1.2-foss-2016b-Python-3.6.4
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_nanosv_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_nanosv_function "$file" & done
     wait
 
-    echo "minimap2/NanoSV processing completed"
+    echo -e "\n-----------minimap2/NanoSV processing completed-----------\n"
 
-fi
-
+fi ) &
+wait
 echo "All processes finished"
 
 #Next steps fusions 
@@ -268,5 +205,3 @@ echo "All processes finished"
 #1000 genomes
 #archer software
 #qiagen fusion software
-
-# Initial framework built off David Coffey's pipeline

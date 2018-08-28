@@ -3,6 +3,8 @@
 # SPLIT EVERYTHING AFTER PORECHOP BY BARCODE
 #   # Need to add names for separate barcodes AND vcf files should include sequence name?
 
+##### Time for Nanoplot/LAST/minimap2/NanoSV 3 Gbp read: 235m25.799s
+
 # Aligner
 echo "Enter Aligner to be used (LAST or minimap2 or both)"
 read ALIGNER

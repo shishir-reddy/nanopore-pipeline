@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# MinION pipeline for structural variant calls parallelized v1.1
-
-##### Time for Nanoplot/LAST/minimap2/NanoSV 3 Gbp read: 69m0.263s
+# MinIon pipeline for structural variant calls parallelized v2.0
 
 ###TBA###
+### Nanoplot, LAST, and minimap2 all parallel
 # Nanopolish
 # Metapore
 # Charlie Hill
@@ -123,6 +122,8 @@ echo -e "\n-----------Porechop processing completed-----------\n"
 
 ###############################
 
+echo -e "\n-----------Beginning Nanoplot processing-----------\n"
+
 Create NanoPlot figures
 NanoStats report included
 mkdir $NANOPLOT
@@ -143,10 +144,13 @@ nanoplot_function () {
 }
 
 #For
-for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do 
+( for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do 
     nanoplot_function "$file" &
-done
+done 
 wait
+echo -e "\n-----------Nanoplot completed-----------\n" ) &
+
+
 
 ###############################
 
@@ -159,7 +163,9 @@ mkdir $NANOSV_DIRECTORY
 
 #LAST -Align to human genome using LAST
 
-if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
+( if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
+
+    echo -e "\n-----------Beginning LAST/NanoSV processing-----------\n"
 
     mkdir $LAST_ALIGNMENT_DIRECTORY
     mkdir $LAST_NANOSV_DIRECTORY
@@ -193,11 +199,10 @@ if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
         NanoSV -s samtools -c config.ini -b $RADICH_HOME/osala/nanopore/hg19-refFlat.bed -o $LAST_NANOSV_DIRECTORY/"${file_name}_last_NanoSV.vcf" $LAST_ALIGNMENT_DIRECTORY/"${file_name}_last-alignment-sorted.bam"
     }
 
-    #Run LAST, samtools, and NanoSV separated to prevent module interference. Each process is done in parallel accross all barcodes
+    #Run LAST in it's own subshell to prevent module interference
     module load LAST/926-foss-2016b
     module load Python/2.7.15-foss-2016b
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_function "$file" & done
-    wait
 
     module load samtools
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_samtools_function "$file" & done
@@ -207,15 +212,18 @@ if [ "$ALIGNER" = "last" ] || [ "$ALIGNER" = "both" ]; then
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_nanosv_function "$file" & done
     wait
 
-    echo "LAST/NanoSV processing completed"
+    echo -e "\n-----------LAST/NanoSV processing completed-----------\n"
 
-fi
+fi ) &
 
 ###############################
 
 # MiniMap2 - Align to human genome using MiniMap2 
 
-if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
+
+( if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
+
+    echo -e "\n-----------Beginning minimap2/NanoSV processing-----------\n"
 
     mkdir $MINIMAP2_ALIGNMENT_DIRECTORY
     mkdir $MINIMAP2_NANOSV_DIRECTORY
@@ -241,21 +249,21 @@ if [ "$ALIGNER" = "minimap2" ] || [ "$ALIGNER" = "both" ]; then
 
     #Run minimap2, samtools, and NanoSV separated to prevent module interference. Each process is done in parallel accross all barcodes
     module load minimap2/2.10-foss-2016b
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_function "$file" & done
     wait
 
     module load samtools
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_samtools_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_samtools_function "$file" & done
     wait
 
     module load NanoSV/1.1.2-foss-2016b-Python-3.6.4
-    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_nanosv_function "$file" &done
+    for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do minimap2_nanosv_function "$file" & done
     wait
 
-    echo "minimap2/NanoSV processing completed"
+    echo -e "\n-----------minimap2/NanoSV processing completed-----------\n"
 
-fi
-
+fi ) &
+wait
 echo "All processes finished"
 
 #Next steps fusions 
