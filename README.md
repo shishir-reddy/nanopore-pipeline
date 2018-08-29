@@ -25,6 +25,6 @@ The script is based off [David Coffey's variant](https://github.com/davidcoffey/
 
 The biggest improvements made to this pipeline have been in running the programs after porechop's demultiplexing in parallel. In experimenting with the effects of running post-porechop programs, runtimes have been greatly reduced. All of the following runs were performed on a 3 Gbp read with the programs NanoPlot, LAST/NanoSV, and minimap2/NanoSV:
 
-- The [basic pipeline script](https://github.com/shishir-reddy/nanopore-pipeline/blob/master/Rhino%20Mirror/scripts/script_sv_barcode_separated_v2.sh), which runs with no background processes on every demuxed barcode, takes **235m25.799s**.
-- An [individually parallelized version](https://github.com/shishir-reddy/nanopore-pipeline/blob/master/Rhino%20Mirror/scripts/script_sv_parallelized_v1.1.sh), where each program is run separately but all the barcodes are run in parallel within each software, takes **69m0.263s**.
-- A fully parallel version, where the programs are all run in parallel and are each individually parallelized among themselves, takes **56m46.236s**.
+- The [basic pipeline script](scripts/script_sv_barcode_separated_v2.sh), which runs with no background processes on every demuxed barcode, takes **235m25.799s**.
+- An [individually parallelized version](scripts/previous-versions/script_sv_parallelized_v1.1.sh), where each program is run separately but all the barcodes are run in parallel within each software, takes **69m0.263s**.
+- A [fully parallel version](scripts/script_sv_parallelized_v2.0.sh), where the programs are all run in parallel and are each individually parallelized among themselves, takes **56m46.236s**.
