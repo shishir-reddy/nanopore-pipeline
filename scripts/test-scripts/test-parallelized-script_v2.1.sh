@@ -1,25 +1,13 @@
 #!/bin/bash
 
-# MinIon pipeline for structural variant calls parallelized v2.0
-
-##### Time for Nanoplot/LAST/minimap2/NanoSV 3 Gbp read: 69m0.263s
-
-###TBA###
-### Nanoplot, LAST, and minimap2 all parallel
-# Nanopolish
-# Metapore
-# Charlie Hill
-#########
-
-# Start by reading inputs from the user - [SEQUENCE_NAME] [/path/to/data] [LAST, minimap2, both]
-
-# Sequence name
-echo "Enter sequence name"
-read SEQUENCE_NAME
-
-# /path/to/data
-echo "Enter /path/to/fast5"
-read FAST5
+#### Adding nanopolish -- methylation option -- variant option
+## https://github.com/jts/nanopolish/blob/master/docs/source/manual.rst
+## https://github.com/jts/nanopolish
+## methylation-aware option
+## Request:
+### nanopolish update; guppy
+# varnomen.hgvs.org
+# annotations of somatic variants
 
 # Aligner
 echo "Enter Aligner to be used (LAST or minimap2 or both)"
@@ -30,23 +18,13 @@ ALIGNER=${ALIGNER,,}
 #/path/to/radich home
 export RADICH_HOME="/fh/fast/radich_j"
 
-#Working folder for the session is created with the date and timestamp. All processes will be run in this folder
-DATE=$(date)
-NAME_DATE_FORMATTED="${SEQUENCE_NAME}_${DATE// /_}"
-export WORKING_FOLDER="$RADICH_HOME/nanopore/Jobs/$NAME_DATE_FORMATTED"
-mkdir $WORKING_FOLDER
-
-export FLOWCELL="FLO-MIN106"
-export KIT="SQK-LSK108"
-
-#/path/to/Fastq/Original (Albacore Folder)
-export FASTQ="$WORKING_FOLDER/albacore-fastq"
+export WORKING_FOLDER="$RADICH_HOME/nanopore/Jobs/parallel-testing"
 
 #/path/to/Fastq/Demultiplexed (Porechop Folder)
-export DEMULTIPLEXED_DIRECTORY="$WORKING_FOLDER/porechop-demux"
+export DEMULTIPLEXED_DIRECTORY="$RADICH_HOME/nanopore/Jobs/Wed_Aug_22_13:53:12_PDT_2018./porechop-demux"
 
 #/path/to/NanoPlot
-export NANOPLOT="$WORKING_FOLDER/nanoplot_$NAME_DATE_FORMATTED"
+export NANOPLOT="$WORKING_FOLDER/nanoplot_Wed_Aug_22_13:53:12_PDT_2018."
 
 #/path/to/ReferenceGenomes
 export REFERENCE="/shared/biodata/ngs/Reference/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta"
@@ -71,53 +49,7 @@ export LAST_NANOSV_DIRECTORY="$NANOSV_DIRECTORY/last-vcf"
 
 #/path/to/Minimap2NanoSV
 export MINIMAP2_NANOSV_DIRECTORY="$NANOSV_DIRECTORY/minimap2-vcf"
-
-###############################
-
-# Albacore
-
-###############################
-
-echo -e "\n-----------Beginning Albacore processing-----------\n"
-
-# Basecall
-mkdir $FASTQ
 module load Python/3.6.5-foss-2016b-fh3
-read_fast5_basecaller.py \
---flowcell $FLOWCELL \
---kit $KIT \
---worker_threads 12 \
---input $FAST5 \
---output_format fastq \
---save_path $FASTQ \
---recursive \
---resume
-
-# Merge all fastq files
-#cat $FASTQ/workspace/pass/barcode*/*.fastq $FASTQ/workspace/pass/unclassified/*.fastq >> $FASTQ/workspace/pass/merged.fastq
-cat $FASTQ/workspace/pass/*.fastq >> $FASTQ/workspace/pass/merged.fastq
-
-echo -e "\n-----------Albacore processing completed-----------\n"
-
-###############################
-
-# Porechop
-
-###############################
-
-echo -e "\n-----------Beginning Porechop processing-----------\n"
-
-# Demultiplex
-mkdir $DEMULTIPLEXED_DIRECTORY
-porechop \
---input $FASTQ/workspace/pass/merged.fastq \
---barcode_dir $DEMULTIPLEXED_DIRECTORY \
---format fastq \
---threads 12 \
--v 2
-
-echo -e "\n-----------Porechop processing completed-----------\n"
-
 ###############################
 
 # Nanoplot
@@ -205,6 +137,7 @@ mkdir $NANOSV_DIRECTORY
     module load LAST/926-foss-2016b
     module load Python/2.7.15-foss-2016b
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_function "$file" & done
+    wait
 
     module load samtools
     for file in $DEMULTIPLEXED_DIRECTORY/*.fastq.gz; do last_samtools_function "$file" & done
@@ -278,5 +211,3 @@ echo "All processes finished"
 #1000 genomes
 #archer software
 #qiagen fusion software
-
-# Initial framework built off David Coffey's pipeline
