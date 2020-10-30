@@ -27,4 +27,4 @@ The biggest improvements made to this pipeline have been in running the programs
 
 - The [basic pipeline script](scripts/script_sv_barcode_separated_v2.sh), which runs with no background processes on every demuxed barcode, takes **235m25.799s**.
 - An [individually parallelized version](scripts/previous-versions/script_sv_parallelized_v1.1.sh), where each program is run separately but all the barcodes are run in parallel within each software, takes **69m0.263s**.
-- A [fully parallel version](scripts/script_sv_parallelized_v2.0.sh), where the programs are all run in parallel and are each individually parallelized among themselves, takes **56m46.236s**.
+- A [fully parallel version](scripts/script_sv_parallelized_v3.0.sh), where the programs are all run in parallel and are each individually parallelized among themselves, takes **56m46.236s**.
